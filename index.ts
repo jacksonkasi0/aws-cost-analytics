@@ -174,7 +174,7 @@ const cloudWatchDatasource = new grafana.oss.DataSource("cloudwatch", {
     }),
 }, { provider: grafanaProvider });
 
-// Create AWS Cost Dashboard in Grafana with fixed dimension queries
+// Create AWS Cost Dashboard in Grafana with Metrics Insights queries
 const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
     folder: costFolder.uid,
     configJson: pulumi.jsonStringify({
@@ -195,14 +195,9 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
                     {
                         refId: "A",
                         datasourceUid: cloudWatchDatasource.uid,
-                        namespace: "AWS/CostAnalytics",
-                        metricName: "ServiceCost",
-                        dimensions: {
-                            Currency: "USD",  // Added required Currency dimension
-                            Service: "*" 
-                        },
-                        statistic: "Maximum",
-                        period: "86400s"
+                        expression: "SELECT MAX(\"ServiceCost\") FROM \"AWS/CostAnalytics\" WHERE \"Currency\"='USD' GROUP BY \"Service\"",
+                        queryType: "metricInsights", 
+                        region: aws.config.region
                     }
                 ]
             },
@@ -223,14 +218,9 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
                 targets: [
                     {
                         refId: "A",
-                        namespace: "AWS/CostAnalytics",
-                        metricName: "ServiceCost",
-                        dimensions: {
-                            Currency: "USD",  // Added required Currency dimension
-                            Service: "*"
-                        },
-                        statistic: "Maximum",
-                        period: "86400s",
+                        expression: "SELECT MAX(\"ServiceCost\") FROM \"AWS/CostAnalytics\" WHERE \"Currency\"='USD' GROUP BY \"Service\"",
+                        queryType: "metricInsights",
+                        region: aws.config.region,
                         format: "table"
                     }
                 ],
@@ -292,15 +282,9 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
                 targets: [
                     {
                         refId: "A",
-                        namespace: "AWS/CostAnalytics",
-                        metricName: "ServiceCost",
-                        dimensions: {
-                            Currency: "USD",  // Added required Currency dimension
-                            Service: "*"
-                        },
-                        statistic: "Maximum",
-                        period: "86400s",
-                        format: "time_series"
+                        expression: "SELECT MAX(\"ServiceCost\") FROM \"AWS/CostAnalytics\" WHERE \"Currency\"='USD' GROUP BY \"Service\"",
+                        queryType: "metricInsights",
+                        region: aws.config.region
                     }
                 ],
                 options: {
@@ -329,14 +313,9 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
                 targets: [
                     {
                         refId: "A",
-                        namespace: "AWS/CostAnalytics",
-                        metricName: "ServiceCost",
-                        dimensions: {
-                            Currency: "USD",  // Added required Currency dimension
-                            Service: "*"
-                        },
-                        statistic: "Sum",
-                        period: "86400s"
+                        expression: "SELECT SUM(\"ServiceCost\") FROM \"AWS/CostAnalytics\" WHERE \"Currency\"='USD' GROUP BY \"Service\"",
+                        queryType: "metricInsights",
+                        region: aws.config.region
                     }
                 ],
                 options: {
@@ -348,6 +327,26 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
                         mode: "single",
                         sort: "none"
                     }
+                }
+            },
+            {
+                id: 5,
+                gridPos: {
+                    h: 3,
+                    w: 24,
+                    x: 0,
+                    y: 24
+                },
+                title: "Troubleshooting Links",
+                type: "text",
+                options: {
+                    content: `
+## Helpful Links
+* [View metrics in AWS Console](https://${aws.config.region}.console.aws.amazon.com/cloudwatch/home?region=${aws.config.region}#metricsV2:graph=~();query=~'*7bAWS*2fCostAnalytics*7d)
+* [Run Lambda manually](https://${aws.config.region}.console.aws.amazon.com/lambda/home?region=${aws.config.region}#/functions/${metricPublisherLambda.name})
+* [View DynamoDB Table](https://${aws.config.region}.console.aws.amazon.com/dynamodb/home?region=${aws.config.region}#tables:selected=${costDataTable.name})
+                    `,
+                    mode: "markdown"
                 }
             }
         ],
@@ -363,8 +362,7 @@ const costDashboard = new grafana.oss.Dashboard("aws-cost-dashboard", {
     }),
 }, { provider: grafanaProvider });
 
-// Create a test dashboard with minimal configuration
-// Add this to your Pulumi file
+// Keep the test dashboard which is already working
 const testDashboard = new grafana.oss.Dashboard("test-dashboard", {
     folder: costFolder.uid,
     configJson: pulumi.jsonStringify({
@@ -379,13 +377,18 @@ const testDashboard = new grafana.oss.Dashboard("test-dashboard", {
                     x: 0,
                     y: 0
                 },
-                title: "Simple Test Panel",
+                title: "Daily AWS Costs by Service",
                 type: "timeseries",
+                datasource: {
+                    type: "cloudwatch",
+                    uid: cloudWatchDatasource.uid  // Explicit reference to your CloudWatch datasource
+                },
                 targets: [
                     {
                         refId: "A",
-                        expression: "SELECT MAX(\"ServiceCost\") FROM \"AWS/CostAnalytics\" GROUP BY \"Service\"",
-                        queryType: "metricInsights"
+                        expression: "SELECT MAX(\"ServiceCost\") FROM \"AWS/CostAnalytics\" WHERE \"Currency\"='USD' GROUP BY \"Service\"",
+                        queryType: "metricInsights",
+                        region: aws.config.region
                     }
                 ]
             }
@@ -398,10 +401,9 @@ const testDashboard = new grafana.oss.Dashboard("test-dashboard", {
     }),
 }, { provider: grafanaProvider });
 
-export const testDashboardUrl = pulumi.interpolate`${grafanaUrl}/d/${testDashboard.uid}`;
-
 // Export important values
 export const dashboardUrl = pulumi.interpolate`${grafanaUrl}/d/${costDashboard.uid}`;
+export const testDashboardUrl = pulumi.interpolate`${grafanaUrl}/d/${testDashboard.uid}`;
 export const dynamoDbTableName = costDataTable.name;
 export const lambdaName = costCollectorLambda.name;
 export const metricPublisherLambdaName = metricPublisherLambda.name;
