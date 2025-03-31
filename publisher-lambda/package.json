@@ -1,0 +1,9 @@
+{
+  "name": "aws-cost-metrics-publisher",
+  "version": "1.0.0",
+  "description": "Lambda function to publish AWS cost data as CloudWatch metrics",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1145.0"
+  }
+} 

@@ -1,0 +1,5 @@
+config:
+  aws:region: ap-south-1
+  aws-cost-dashboard:grafanaUrl: https://xxxxxxxx.grafana.net
+  aws-cost-dashboard:grafanaApiKey:
+    secure: xxxxxxxxxxxx

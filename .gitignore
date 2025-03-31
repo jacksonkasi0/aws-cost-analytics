@@ -1,0 +1,20 @@
+# Pulumi secrets
+Pulumi.*.yaml
+
+# Environment files
+.env
+.env.*
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
